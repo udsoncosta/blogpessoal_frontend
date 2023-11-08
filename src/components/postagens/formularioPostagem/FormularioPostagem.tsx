@@ -7,22 +7,26 @@ import { AuthContext } from '../../../contexts/AuthContext';
 
 import Tema from '../../../models/Tema';
 import Postagem from '../../../models/Postagem';
+import { toastAlerta } from '../../../utils/toastAlerta';
 
 function FormularioPostagem() {
 
     const navigate = useNavigate();
-
+    //Controla o carregamento da página enquanto uma ação é realizada
     const [isLoading, setIsLoading] = useState<boolean>(false)
+    //Variável de estado 'temas' chama um array com todos os temas
     const [temas, setTemas] = useState<Tema[]>([])
-
+    //Variável de estado que traz o objeto (tema nesse caso) escolhido
     const [tema, setTema] = useState<Tema>({ id: 0, descricao: '', })
+    //Armazena informações relacionadas a Postagem - que será cadastrado ou atualizado
     const [postagem, setPostagem] = useState<Postagem>({} as Postagem)
-
+    //Pega os parâmetros que são enviados da url
     const { id } = useParams<{ id: string }>()
-
+    //Acessa a authContetx  e desestruturamos seus  dados(usuario) para que essas propriedades possam ser usadas no componente
     const { usuario, handleLogout } = useContext(AuthContext)
     const token = usuario.token
 
+    //Função assincrona buscando as postagens pelo Id para edição
     async function buscarPostagemPorId(id: string) {
         await buscar(`/postagens/${id}`, setPostagem, {
             headers: {
@@ -30,7 +34,7 @@ function FormularioPostagem() {
             },
         })
     }
-
+    //Função assincrona buscando os temas escolhidos pelo Id
     async function buscarTemaPorId(id: string) {
         await buscar(`/temas/${id}`, setTema, {
             headers: {
@@ -39,6 +43,7 @@ function FormularioPostagem() {
         })
     }
 
+    //Buca todos os temas
     async function buscarTemas() {
         await buscar('/temas', setTemas, {
             headers: {
@@ -47,13 +52,15 @@ function FormularioPostagem() {
         })
     }
 
+    //Verifica o token e manda pra página de login se estiver vazio
     useEffect(() => {
         if (token === '') {
-            alert('Você precisa estar logado');
+            toastAlerta('Você precisa estar logado', 'info');
             navigate('/');
         }
     }, [token])
 
+    //buscarTemas é executado quando o o valor de sua variável de dependência (ID) for diferente 
     useEffect(() => {
         buscarTemas()
 
@@ -69,6 +76,7 @@ function FormularioPostagem() {
         })
     }, [tema])
 
+    //Captura o input e acessa a propriedade 'name'
     function atualizarEstado(e: ChangeEvent<HTMLInputElement>) {
         setPostagem({
             ...postagem,
@@ -81,11 +89,15 @@ function FormularioPostagem() {
     function retornar() {
         navigate('/postagens');
     }
-
+//impede o carregamento da página ao clicar no botão de envio
     async function gerarNovaPostagem(e: ChangeEvent<HTMLFormElement>) {
         e.preventDefault()
         setIsLoading(true)
 
+
+        //se o id for definido e o usuário logado ele vai pra atualização da postagem
+        //se estiver sem o token(erro 403)dá o alert de token expirado, se for outro erro dá o alert de erro ao atualizar
+        //se estiver indefinido ele vai página de cadastro de postagem
         if (id != undefined) {
             try {
                 await atualizar(`/postagens`, postagem, setPostagem, {
@@ -94,14 +106,14 @@ function FormularioPostagem() {
                     },
                 });
 
-                alert('Postagem atualizada com sucesso')
+                toastAlerta('Postagem atualizada com sucesso', 'sucesso')
 
             } catch (error: any) {
                 if (error.toString().includes('403')) {
-                    alert('O token expirou, favor logar novamente')
+                    toastAlerta('O token expirou, favor logar novamente', 'info')
                     handleLogout()
                 } else {
-                    alert('Erro ao atualizar a Postagem')
+                    toastAlerta('Erro ao atualizar a Postagem', 'erro')
                 }
             }
 
@@ -113,14 +125,14 @@ function FormularioPostagem() {
                     },
                 })
 
-                alert('Postagem cadastrada com sucesso');
+                toastAlerta('Postagem cadastrada com sucesso', 'sucesso');
 
             } catch (error: any) {
                 if (error.toString().includes('403')) {
-                    alert('O token expirou, favor logar novamente')
+                    toastAlerta('O token expirou, favor logar novamente', 'info')
                     handleLogout()
                 } else {
-                    alert('Erro ao cadastrar a Postagem');
+                    toastAlerta('Erro ao cadastrar a Postagem', 'erro');
                 }
             }
         }
@@ -129,6 +141,9 @@ function FormularioPostagem() {
         retornar()
     }
 
+
+    //Só libera o botão 'confirmar' quando tudo estiver preenchido
+    //'gerarNovaPostagem' if ternário verifica o id
     const carregandoTema = tema.descricao === '';
 
     return (
@@ -136,7 +151,6 @@ function FormularioPostagem() {
             <h1 className="text-4xl text-center my-8">
                 {id !== undefined ? 'Editar Postagem' : 'Cadastrar Postagem'}
             </h1>
-
             <form className="flex flex-col w-1/2 gap-4" onSubmit={gerarNovaPostagem}>
                 <div className="flex flex-col gap-2">
                     <label htmlFor="titulo">Título da Postagem</label>
